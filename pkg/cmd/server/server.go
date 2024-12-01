@@ -469,19 +469,23 @@ func (c *Config) Complete(ctx context.Context) (RunnableServer, error) {
 	if err != nil {
 		log.Warn().Err(err).Msg("unable to initialize info collector")
 	} else {
-		if err := prometheus.Register(infoCollector); err != nil {
-			log.Warn().Err(err).Msg("unable to initialize info collector")
+		// Register infoCollector only if datastore metrics are enabled
+		if c.DatastoreConfig.EnableDatastoreMetrics {
+			if err := prometheus.Register(infoCollector); err != nil {
+				log.Warn().Err(err).Msg("unable to initialize info collector")
+			}
 		}
 	}
 
 	var telemetryRegistry *prometheus.Registry
 
+	// Configure telemetry reporter based on EnableDatastoreMetrics
 	reporter := telemetry.DisabledReporter
 	if c.SilentlyDisableTelemetry {
 		reporter = telemetry.SilentlyDisabledReporter
 	} else if c.TelemetryEndpoint != "" && c.DatastoreConfig.DisableStats {
 		reporter = telemetry.DisabledReporter
-	} else if c.TelemetryEndpoint != "" {
+	} else if c.TelemetryEndpoint != "" && c.DatastoreConfig.EnableDatastoreMetrics {
 		log.Ctx(ctx).Debug().Msg("initializing telemetry collector")
 		registry, err := telemetry.RegisterTelemetryCollector(c.DatastoreConfig.Engine, ds)
 		if err != nil {
