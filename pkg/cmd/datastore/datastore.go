@@ -18,6 +18,7 @@ import (
 	"github.com/authzed/spicedb/internal/datastore/postgres"
 	"github.com/authzed/spicedb/internal/datastore/proxy"
 	"github.com/authzed/spicedb/internal/datastore/spanner"
+	// "github.com/authzed/spicedb/internal/datastore/sqlite"
 	log "github.com/authzed/spicedb/internal/logging"
 	"github.com/authzed/spicedb/pkg/datastore"
 	"github.com/authzed/spicedb/pkg/validationfile"
@@ -35,7 +36,9 @@ const (
 	PostgresEngine  = "postgres"
 	CockroachEngine = "cockroachdb"
 	SpannerEngine   = "spanner"
-	MySQLEngine     = "mysql"
+    MySQLEngine     = "mysql"
+    // SQLiteEngine is the identifier for the SQLite datastore engine.
+    SQLiteEngine    = "sqlite"
 )
 
 var BuilderForEngine = map[string]engineBuilderFunc{
@@ -43,7 +46,9 @@ var BuilderForEngine = map[string]engineBuilderFunc{
 	PostgresEngine:  newPostgresDatastore,
 	MemoryEngine:    newMemoryDatstore,
 	SpannerEngine:   newSpannerDatastore,
-	MySQLEngine:     newMySQLDatastore,
+    MySQLEngine:     newMySQLDatastore,
+    // SQLiteEngine builder stub
+    SQLiteEngine:    newSQLiteDatastore,
 }
 
 //go:generate go run github.com/ecordell/optgen -output zz_generated.connpool.options.go . ConnPoolConfig
@@ -787,4 +792,10 @@ func newMemoryDatstore(_ context.Context, opts Config) (datastore.Datastore, err
 
 	log.Warn().Msg("in-memory datastore is not persistent and not feasible to run in a high availability fashion")
 	return memdb.NewMemdbDatastore(opts.WatchBufferLength, opts.RevisionQuantization, opts.GCWindow)
+}
+
+// newSQLiteDatastore wires up the SQLite engine builder.
+func newSQLiteDatastore(ctx context.Context, opts Config) (datastore.Datastore, error) {
+    // TODO: support pool, migrations, and advanced options.
+    return sqlite.NewSQLiteDatastore(ctx, opts.URI)
 }
