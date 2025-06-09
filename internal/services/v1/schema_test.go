@@ -1643,3 +1643,68 @@ func TestComputablePermissions(t *testing.T) {
 		})
 	}
 }
+
+func TestSchemaChangeRelationDeprecation(t *testing.T) {
+	conn, cleanup, _, _ := testserver.NewTestServer(require.New(t), 0, memdb.DisableGC, true, tf.EmptyDatastore)
+	t.Cleanup(cleanup)
+	client := v1.NewSchemaServiceClient(conn)
+	v1client := v1.NewPermissionsServiceClient(conn)
+
+	// Write a basic schema.
+	originalSchema := `
+		definition user {}
+
+		definition document {
+			relation somerelation: user
+		}`
+	_, err := client.WriteSchema(context.Background(), &v1.WriteSchemaRequest{
+		Schema: originalSchema,
+	})
+	require.NoError(t, err)
+
+	// Write the relationship referencing the relation.
+	toWrite := tuple.MustParse("document:somedoc#somerelation@user:tom")
+	_, err = v1client.WriteRelationships(context.Background(), &v1.WriteRelationshipsRequest{
+		Updates: []*v1.RelationshipUpdate{tuple.MustUpdateToV1RelationshipUpdate(tuple.Create(
+			toWrite,
+		))},
+	})
+	require.Nil(t, err)
+
+	deprecatedSchema := `
+		definition user {}
+
+		definition document {
+			@deprecated(error)
+			relation somerelation: user
+		}`
+
+	// Enforce deprecation over the relation in the new schema.
+	_, err = client.WriteSchema(context.Background(), &v1.WriteSchemaRequest{
+		Schema: deprecatedSchema,
+	})
+	require.NoError(t, err)
+	
+	// Attempt to write to a deprecated relation which should fail.
+	toWrite = tuple.MustParse("document:somedoc#somerelation@user:jerry")
+	_, err = v1client.WriteRelationships(context.Background(), &v1.WriteRelationshipsRequest{
+		Updates: []*v1.RelationshipUpdate{tuple.MustUpdateToV1RelationshipUpdate(tuple.Create(
+			toWrite,
+		))},
+	})
+	require.Equal(t, "rpc error: code = Aborted desc = relation document#somerelation is deprecated", err.Error())
+
+	// Change the schema to remove the deprecation type.
+	_, err = client.WriteSchema(context.Background(), &v1.WriteSchemaRequest{
+		Schema: originalSchema,
+	})
+	require.NoError(t, err)
+
+	// Again attempt to write to the relation, which should now succeed.
+	_, err = v1client.WriteRelationships(context.Background(), &v1.WriteRelationshipsRequest{
+		Updates: []*v1.RelationshipUpdate{tuple.MustUpdateToV1RelationshipUpdate(tuple.Create(
+			toWrite,
+		))},
+	})
+	require.NoError(t, err)	
+}
