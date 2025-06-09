@@ -130,6 +130,7 @@ func TestParser(t *testing.T) {
 		{"invalid use", "invaliduse"},
 		{"use after definition", "useafterdef"},
 		{"invalid use expiration test", "invaliduseexpiration"},
+		{"deprecated relation test", "deprecation"},
 	}
 
 	for _, test := range parserTests {

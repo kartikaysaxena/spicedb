@@ -381,6 +381,7 @@ func (m *Relation) CloneVT() *Relation {
 	r.SourcePosition = m.SourcePosition.CloneVT()
 	r.AliasingRelation = m.AliasingRelation
 	r.CanonicalCacheKey = m.CanonicalCacheKey
+	r.DeprecationType = m.DeprecationType
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
 		copy(r.unknownFields, m.unknownFields)
@@ -1523,6 +1524,9 @@ func (this *Relation) EqualVT(that *Relation) bool {
 		return false
 	}
 	if this.CanonicalCacheKey != that.CanonicalCacheKey {
+		return false
+	}
+	if this.DeprecationType != that.DeprecationType {
 		return false
 	}
 	return string(this.unknownFields) == string(that.unknownFields)
@@ -3437,6 +3441,11 @@ func (m *Relation) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m.unknownFields != nil {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
+	}
+	if m.DeprecationType != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.DeprecationType))
+		i--
+		dAtA[i] = 0x40
 	}
 	if len(m.CanonicalCacheKey) > 0 {
 		i -= len(m.CanonicalCacheKey)
@@ -5411,6 +5420,9 @@ func (m *Relation) SizeVT() (n int) {
 	l = len(m.CanonicalCacheKey)
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	if m.DeprecationType != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.DeprecationType))
 	}
 	n += len(m.unknownFields)
 	return n
@@ -8497,6 +8509,25 @@ func (m *Relation) UnmarshalVT(dAtA []byte) error {
 			}
 			m.CanonicalCacheKey = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
+		case 8:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DeprecationType", wireType)
+			}
+			m.DeprecationType = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.DeprecationType |= DeprecationType(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		default:
 			iNdEx = preIndex
 			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
