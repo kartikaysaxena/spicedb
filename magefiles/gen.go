@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/authzed/spicedb/pkg/cmd"
+
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 )
@@ -14,7 +16,7 @@ type Gen mg.Namespace
 
 // All Run all generators in parallel
 func (g Gen) All() error {
-	mg.Deps(g.Go, g.Proto)
+	mg.Deps(g.Go, g.Proto, g.Docs)
 	return nil
 }
 
@@ -22,6 +24,23 @@ func (g Gen) All() error {
 func (Gen) Go() error {
 	fmt.Println("generating go")
 	return sh.RunV("go", "generate", "./...")
+}
+
+// Docs Generate documentation
+func (g Gen) Docs() error {
+	targetDir := "../docs"
+
+	if err := os.MkdirAll(targetDir, os.ModePerm); err != nil {
+		return err
+	}
+
+	rootCmd, err := cmd.BuildRootCommand()
+	if err != nil {
+		return err
+	}
+
+	cleanCommand(rootCmd)
+	return GenCustomMarkdownTree(rootCmd, targetDir)
 }
 
 // Proto Run proto codegen
